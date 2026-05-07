@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hooksmith.schema.json",
+  "title": "hooksmith",
+  "description": "Declarative Claude Code hooks configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path to the JSON Schema for IDE validation"
+    },
+    "guard": {
+      "description": "Sugar that expands to PreToolUse deny rules. Block dangerous bash commands and file writes.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bash": {
+          "description": "Bash command patterns to deny. Substring match by default; wrap in /regex/ for regex.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/guardEntry" }
+        },
+        "files": {
+          "description": "File path glob patterns to protect from Write/Edit/MultiEdit.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/guardEntry" }
+        }
+      }
+    },
+    "allow": {
+      "description": "Sugar that expands to PermissionRequest allow rules. Auto-approve safe commands.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bash": {
+          "description": "Bash command patterns to auto-approve. Substring match by default; wrap in /regex/ for regex.",
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Substring or /regex/ pattern to match against the bash command"
+              },
+              {
+                "type": "object",
+                "required": ["match"],
+                "additionalProperties": false,
+                "properties": {
+                  "match": { "type": "string", "description": "Substring or /regex/ pattern" }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "on": {
+      "description": "Event hook rules. Maps Claude Code event names to arrays of rules.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "PreToolUse":        { "$ref": "#/$defs/ruleArray", "description": "Fires before a tool executes. Can deny/allow/modify the tool call." },
+        "PostToolUse":       { "$ref": "#/$defs/ruleArray", "description": "Fires after a tool succeeds." },
+        "PostToolUseFailure":{ "$ref": "#/$defs/ruleArray", "description": "Fires after a tool fails." },
+        "PostToolBatch":     { "$ref": "#/$defs/ruleArray", "description": "Fires after a batch of tool calls completes." },
+        "PermissionRequest": { "$ref": "#/$defs/ruleArray", "description": "Fires when Claude Code shows a permission dialog. Can allow/deny." },
+        "PermissionDenied":  { "$ref": "#/$defs/ruleArray", "description": "Fires when a permission request is denied." },
+        "FileChanged":       { "$ref": "#/$defs/ruleArray", "description": "Fires when a file changes on disk." },
+        "Stop":              { "$ref": "#/$defs/ruleArray", "description": "Fires when Claude finishes responding. Can block with block_on_fail." },
+        "StopFailure":       { "$ref": "#/$defs/ruleArray", "description": "Fires when Claude's stop sequence fails." },
+        "SubagentStart":     { "$ref": "#/$defs/ruleArray", "description": "Fires when a subagent starts." },
+        "SubagentStop":      { "$ref": "#/$defs/ruleArray", "description": "Fires when a subagent finishes." },
+        "SessionStart":      { "$ref": "#/$defs/ruleArray", "description": "Fires when a Claude Code session begins." },
+        "SessionEnd":        { "$ref": "#/$defs/ruleArray", "description": "Fires when a Claude Code session ends." },
+        "UserPromptSubmit":  { "$ref": "#/$defs/ruleArray", "description": "Fires when the user submits a prompt. Can block with exit code 2." },
+        "UserPromptExpansion":{ "$ref": "#/$defs/ruleArray", "description": "Fires when a user prompt is expanded." },
+        "Notification":      { "$ref": "#/$defs/ruleArray", "description": "Fires when Claude sends a notification." },
+        "WorktreeCreate":    { "$ref": "#/$defs/ruleArray", "description": "Fires when a git worktree is created." },
+        "WorktreeRemove":    { "$ref": "#/$defs/ruleArray", "description": "Fires when a git worktree is removed." },
+        "ConfigChange":      { "$ref": "#/$defs/ruleArray", "description": "Fires when Claude Code settings change." },
+        "PreCompact":        { "$ref": "#/$defs/ruleArray", "description": "Fires before context compaction." },
+        "PostCompact":       { "$ref": "#/$defs/ruleArray", "description": "Fires after context compaction." },
+        "TaskCompleted":     { "$ref": "#/$defs/ruleArray", "description": "Fires when a background task completes." },
+        "TaskCreated":       { "$ref": "#/$defs/ruleArray", "description": "Fires when a background task is created." },
+        "TeammateIdle":      { "$ref": "#/$defs/ruleArray", "description": "Fires when a teammate agent becomes idle." },
+        "InstructionsLoaded":{ "$ref": "#/$defs/ruleArray", "description": "Fires when CLAUDE.md instructions are loaded." },
+        "CwdChanged":        { "$ref": "#/$defs/ruleArray", "description": "Fires when the working directory changes." },
+        "Elicitation":       { "$ref": "#/$defs/ruleArray", "description": "Fires during an elicitation request." },
+        "ElicitationResult": { "$ref": "#/$defs/ruleArray", "description": "Fires when an elicitation result is returned." }
+      }
+    }
+  },
+  "$defs": {
+    "guardEntry": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Substring or /regex/ pattern. Block reason will be auto-generated."
+        },
+        {
+          "type": "object",
+          "required": ["match"],
+          "additionalProperties": false,
+          "properties": {
+            "match": {
+              "type": "string",
+              "description": "Substring or /regex/ pattern to match against the bash command or file path"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Human-readable reason shown when this guard triggers"
+            }
+          }
+        }
+      ]
+    },
+    "ruleArray": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rule" }
+    },
+    "rule": {
+      "type": "object",
+      "description": "A hook rule with an optional match condition and exactly one action.",
+      "properties": {
+        "match": {
+          "description": "When to fire this rule. Omit to match every occurrence.",
+          "$ref": "#/$defs/match"
+        },
+        "run": {
+          "description": "Shell command(s) to execute. Exit 0 = success (silent). Exit 2 = block. Exit other = error context.",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" }, "description": "Sequential commands" }
+          ]
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Text sent to Claude as additional context. Supports {template} variables."
+        },
+        "http": {
+          "description": "POST the event JSON to a webhook. Response body parsed as a JSON decision.",
+          "$ref": "#/$defs/httpConfig"
+        },
+        "agent": {
+          "type": "string",
+          "description": "Prompt sent to Claude as an agent evaluation request. Supports {template} variables."
+        },
+        "deny": {
+          "type": "string",
+          "description": "Immediately deny the tool use or permission request with this reason. Supports {template} variables. Only for PreToolUse and PermissionRequest."
+        },
+        "allow": {
+          "type": "boolean",
+          "const": true,
+          "description": "Immediately allow the tool use or permission request."
+        },
+        "updated_input": {
+          "type": "object",
+          "description": "Modified tool_input to pass to the tool (allow only)."
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 300,
+          "description": "Seconds before the command is killed. Default: 55."
+        },
+        "async": {
+          "type": "boolean",
+          "description": "Run the command in the background without blocking Claude Code."
+        },
+        "output": {
+          "type": "string",
+          "enum": ["json"],
+          "description": "Parse command stdout as a JSON decision object."
+        },
+        "block_on_fail": {
+          "type": "boolean",
+          "description": "For Stop/SubagentStop: block Claude from stopping if the command exits non-zero."
+        }
+      }
+    },
+    "match": {
+      "description": "Condition controlling when a rule fires.",
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Shorthand: tool name (tool events) or substring/regex (UserPromptSubmit, Notification)."
+        },
+        {
+          "type": "object",
+          "description": "All specified conditions must match (AND semantics).",
+          "properties": {
+            "tool": {
+              "type": "string",
+              "description": "Pipe-separated tool names or globs. E.g. \"Bash\", \"Edit|Write\", \"mcp__github__*\""
+            },
+            "file": {
+              "type": "string",
+              "description": "File path glob with brace expansion. E.g. \"*.{ts,tsx}\", \".env*\", \"src/**/*.py\""
+            },
+            "prompt": {
+              "type": "string",
+              "description": "Substring or /regex/ matched against user_prompt (UserPromptSubmit only)."
+            },
+            "message": {
+              "type": "string",
+              "description": "Substring or /regex/ matched against message (Notification only)."
+            }
+          },
+          "patternProperties": {
+            "^input\\.": {
+              "type": "string",
+              "description": "Dotpath into tool_input matched as substring or /regex/. E.g. \"input.command\": \"/sudo/\""
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "httpConfig": {
+      "type": "object",
+      "required": ["url"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Webhook URL. Supports {template} variables."
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH"],
+          "default": "POST",
+          "description": "HTTP method."
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Additional HTTP headers. Values support {template} variables."
+        }
+      }
+    }
+  }
+}

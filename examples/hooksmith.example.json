@@ -1,0 +1,104 @@
+{
+  "$schema": "../schema/hooksmith.schema.json",
+
+  "guard": {
+    "bash": [
+      { "match": "rm -rf /", "reason": "Destructive command blocked" },
+      { "match": ":(){ :|:& };:", "reason": "Fork bomb blocked" },
+      { "match": "> /dev/sd", "reason": "Direct disk write blocked" },
+      { "match": "chmod -R 777", "reason": "Overly permissive chmod blocked" },
+      { "match": "DROP TABLE", "reason": "Database DDL blocked" },
+      { "match": "TRUNCATE TABLE", "reason": "Database DDL blocked" }
+    ],
+    "files": [
+      { "match": ".env*", "reason": "Environment files are protected" },
+      { "match": "*.pem", "reason": "Certificate files are protected" },
+      { "match": "*.key", "reason": "Key files are protected" },
+      { "match": "id_rsa*", "reason": "SSH keys are protected" }
+    ]
+  },
+
+  "allow": {
+    "bash": ["npm test", "npm run lint", "npm run build", "npx prettier", "npx eslint"]
+  },
+
+  "on": {
+    "PostToolUse": [
+      {
+        "match": { "tool": "Write|Edit|MultiEdit", "file": "*.{ts,tsx,js,jsx}" },
+        "run": "prettier --write {file}"
+      },
+      {
+        "match": { "tool": "Write|Edit|MultiEdit", "file": "*.{ts,tsx,js,jsx}" },
+        "run": "eslint --fix {file}"
+      },
+      {
+        "match": { "tool": "Write|Edit|MultiEdit", "file": "*.py" },
+        "run": ["black {file}", "isort {file}"]
+      },
+      {
+        "match": { "tool": "Write|Edit|MultiEdit", "file": "*.py" },
+        "run": "ruff check --fix {file}"
+      },
+      {
+        "match": { "tool": "Write|Edit|MultiEdit", "file": "*.go" },
+        "run": "gofmt -w {file}"
+      },
+      {
+        "match": { "tool": "Write|Edit|MultiEdit", "file": "*.rs" },
+        "run": "rustfmt {file}"
+      },
+      {
+        "match": { "tool": "Write|Edit|MultiEdit", "file": "*.{json,yaml,yml,md}" },
+        "run": "prettier --write {file}"
+      }
+    ],
+
+    "PreToolUse": [
+      {
+        "match": { "tool": "Bash", "input.command": "/curl[^|]+\\|\\s*sh/" },
+        "deny": "Pipe-to-shell pattern blocked: {input.command}"
+      },
+      {
+        "match": { "tool": "mcp__github__create_issue" },
+        "prompt": "Review this GitHub issue creation before proceeding: {input}"
+      },
+      {
+        "match": { "tool": "mcp__*" },
+        "http": {
+          "url": "http://localhost:9090/hooks/mcp-audit",
+          "headers": { "X-Tool": "{tool}" }
+        }
+      }
+    ],
+
+    "Stop": [
+      {
+        "run": "npm test",
+        "block_on_fail": true
+      }
+    ],
+
+    "SessionStart": [
+      { "run": "echo \"Project: $(basename $(pwd)), Branch: $(git branch --show-current 2>/dev/null || echo 'n/a')\"" }
+    ],
+
+    "UserPromptSubmit": [
+      {
+        "match": { "prompt": "/deploy|production|release/" },
+        "prompt": "This prompt mentions deployment/production. Verify the user's intent and ensure safety: {prompt}"
+      }
+    ],
+
+    "Notification": [
+      {
+        "run": "notify-send 'Claude Code' 'Awaiting your input' 2>/dev/null || osascript -e 'display notification \"Awaiting your input\" with title \"Claude Code\"' 2>/dev/null || true",
+        "async": true
+      }
+    ],
+
+    "TaskCompleted": [
+      { "run": "echo 'Task completed at '$(date -Iseconds)" }
+    ]
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "name": "hooksmith",
+  "version": "1.0.0",
+  "description": "Declarative Claude Code hooks — husky/lint-staged-inspired config over the full hooks API.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-branches=80 --test-coverage-functions=95 --test-coverage-exclude='scripts/**'"
+  },
+  "author": {
+    "name": "Jack Moore",
+    "email": "jack@jtmthf.com"
+  },
+  "license": "MIT",
+  "hooksmith": {
+    "guard": {
+      "bash": [
+        { "match": "rm -rf scripts", "reason": "Core scripts directory is protected" },
+        { "match": "rm -rf hooks", "reason": "Hook registry directory is protected" },
+        { "match": "rm -rf tests", "reason": "Test suite directory is protected" },
+        { "match": "git push --force", "reason": "Force push blocked — hooksmith is a public package" },
+        { "match": "git push -f ", "reason": "Force push blocked — hooksmith is a public package" }
+      ],
+      "files": [
+        { "match": "hooks/hooks.json", "reason": "Hook event registry is protected — all 28 events must stay registered" },
+        { "match": "schema/hooksmith.schema.json", "reason": "Public JSON Schema contract is protected — breaking changes require a version bump" },
+        { "match": ".claude-plugin/marketplace.json", "reason": "Plugin marketplace manifest is protected" }
+      ]
+    },
+    "on": {
+      "PostToolUse": [
+        {
+          "match": { "tool": "Write|Edit|MultiEdit", "file": "*.js" },
+          "run": "node --check {file}"
+        }
+      ],
+      "Stop": [
+        {
+          "run": "node --test",
+          "block_on_fail": true
+        }
+      ],
+      "SessionStart": [
+        {
+          "run": "node -p \"'hooksmith v'+require('./package.json').version+' | node '+process.version\""
+        }
+      ]
+    }
+  }
+}
