@@ -34,18 +34,11 @@ One file. All 28 events. Four action types. File globs, MCP tool patterns, jsonp
 ## Install
 
 ```bash
-claude plugin install hooksmith
+claude plugin marketplace add jtmthf/hooksmith
+claude plugin install hooksmith@hooksmith
 ```
 
-Or locally:
-
-```bash
-git clone <repo> && cd hooksmith
-claude plugin marketplace add ./
-claude plugin install hooksmith
-```
-
-Requires Node.js (no npm install needed — zero dependencies).
+Requires Node.js ≥ 22 (no npm install needed — zero dependencies).
 
 ## Quick start
 
