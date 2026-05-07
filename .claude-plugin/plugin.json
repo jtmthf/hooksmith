@@ -1,6 +1,6 @@
 {
   "name": "hooksmith",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Declarative Claude Code hooks — husky/lint-staged-inspired config over the full hooks API. Supports all 28 events, matchers, action types (run/prompt/http/agent), async execution, file globs, jsonpath templates, decision control, and guard/allow shortcuts.",
   "author": {
     "name": "Jack Moore",

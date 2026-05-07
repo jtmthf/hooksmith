@@ -1,6 +1,6 @@
 {
   "name": "hooksmith",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Declarative Claude Code hooks — husky/lint-staged-inspired config over the full hooks API.",
   "type": "module",
   "engines": {
