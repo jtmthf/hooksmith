@@ -768,16 +768,21 @@ describe('loadConfig', () => {
   let savedProjectDir;
   let savedHome;
 
+  let savedCwd;
+
   beforeEach(() => {
     tmp = mkTmp();
     savedProjectDir = process.env.CLAUDE_PROJECT_DIR;
     savedHome = process.env.HOME;
+    savedCwd = process.cwd();
     process.env.CLAUDE_PROJECT_DIR = tmp.dir;
     // Point HOME at tmp.dir so the HOME candidate doesn't pick up real user config
     process.env.HOME = tmp.dir;
+    process.chdir(tmp.dir);
   });
 
   afterEach(() => {
+    process.chdir(savedCwd);
     if (savedProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
     else process.env.CLAUDE_PROJECT_DIR = savedProjectDir;
     if (savedHome === undefined) delete process.env.HOME;
