@@ -199,6 +199,12 @@ Omit `match` to fire on every occurrence.
 { "run": ["black {file}", "isort {file}"] }
 ```
 
+**Package script shorthand:** a bare word with no spaces that matches a key in `package.json#scripts` is automatically rewritten to `<pm> run <name>` using the detected package manager (bun/pnpm/yarn/npm). This avoids broad permission grants like `node *`:
+
+```json
+{ "run": "test", "block_on_fail": true }
+```
+
 hooksmith automatically prepends `node_modules/.bin`, `/opt/homebrew/bin`, and other common tool paths to `PATH` — binaries installed locally (without `-g`) work without `npx`.
 
 **Token-optimal output:** success is silent. Failure forwards exit code + first line of stderr only.

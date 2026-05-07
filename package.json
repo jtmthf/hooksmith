@@ -39,7 +39,7 @@
       ],
       "Stop": [
         {
-          "run": "node --test",
+          "run": "test",
           "block_on_fail": true
         }
       ],

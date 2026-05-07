@@ -173,6 +173,11 @@ Each rule needs exactly one action.
 ```
 hooksmith automatically prepends `node_modules/.bin` and common tool paths to `PATH`.
 
+**Package script shorthand:** a bare word matching a key in `package.json#scripts` is automatically rewritten to `<pm> run <name>` (detects bun/pnpm/yarn/npm from lockfiles). Avoids broad permission grants like `node *`:
+```json
+{ "run": "test", "block_on_fail": true }
+```
+
 **Output policy:** success is silent (no stdout forwarded to Claude). Failure forwards exit code + first line of stderr only.
 
 ### `prompt` — LLM evaluation

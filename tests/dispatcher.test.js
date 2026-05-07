@@ -26,6 +26,8 @@ import {
   parseGuardEntry,
   executeHook,
   loadConfig,
+  resolveScript,
+  detectPackageManager,
   MAX_LEN,
 } from '../lib/dispatcher.js';
 import { mkTmp, runScript, writeHooksmith } from './helpers.js';
@@ -750,6 +752,72 @@ describe('executeHook — run rule', () => {
       result === null ||
         result.hookSpecificOutput.additionalContext.includes('timeout'),
     );
+  });
+});
+
+// ─── detectPackageManager ─────────────────────────────────────────────────────
+
+describe('detectPackageManager', () => {
+  let tmp;
+  before(() => { tmp = mkTmp(); });
+  after(() => { tmp.cleanup(); });
+
+  it('returns npm when no lockfile is present', () => {
+    assert.strictEqual(detectPackageManager(tmp.dir), 'npm');
+  });
+
+  it('detects pnpm via pnpm-lock.yaml', () => {
+    writeFileSync(join(tmp.dir, 'pnpm-lock.yaml'), '', 'utf8');
+    assert.strictEqual(detectPackageManager(tmp.dir), 'pnpm');
+  });
+});
+
+// ─── resolveScript ────────────────────────────────────────────────────────────
+
+describe('resolveScript', () => {
+  let tmp;
+  before(() => {
+    tmp = mkTmp();
+    writeFileSync(
+      join(tmp.dir, 'package.json'),
+      JSON.stringify({ scripts: { test: 'node --test', build: 'tsc' } }),
+      'utf8',
+    );
+  });
+  after(() => { tmp.cleanup(); });
+
+  it('resolves a bare script name to npm run <name>', () => {
+    assert.strictEqual(resolveScript('test', tmp.dir), 'npm run test');
+  });
+
+  it('resolves a script with a colon in the name', () => {
+    writeFileSync(
+      join(tmp.dir, 'package.json'),
+      JSON.stringify({ scripts: { test: 'node --test', 'test:coverage': 'node --test --coverage' } }),
+      'utf8',
+    );
+    assert.strictEqual(resolveScript('test:coverage', tmp.dir), 'npm run test:coverage');
+  });
+
+  it('passes through commands with whitespace unchanged', () => {
+    assert.strictEqual(resolveScript('node --check foo.js', tmp.dir), 'node --check foo.js');
+  });
+
+  it('passes through bare words that are not script names', () => {
+    assert.strictEqual(resolveScript('unknown', tmp.dir), 'unknown');
+  });
+
+  it('passes through commands with shell operators unchanged', () => {
+    assert.strictEqual(resolveScript('echo a && echo b', tmp.dir), 'echo a && echo b');
+  });
+
+  it('returns the command unchanged when no package.json exists', () => {
+    const empty = mkTmp();
+    try {
+      assert.strictEqual(resolveScript('test', empty.dir), 'test');
+    } finally {
+      empty.cleanup();
+    }
   });
 });
 
